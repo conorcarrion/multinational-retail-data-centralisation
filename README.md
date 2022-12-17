@@ -12,3 +12,36 @@ I proceeded to set up the Docker Compose file and Dockerfile to boot the contain
 I created 3 python files for 3 classes of components of my pipeline. A data extractor, a data connector and a data cleaner. I started writing methods for each. I began by writing a method to load my database credentials from a yaml file. Then I created a method to instantiate my SQLAlchemy engine with the credentials from the previous method. Then I wrote a method to list the tables available from the connected database. 
 
 For the data extractor module, I wrote a method which could take a table name and using the sqlalchemy engine, query the database for this entire table and convert it to a python dictionary. I also added another method which did the same thing but as a Pandas dataframe.
+
+#### Exploratory Data visualisation
+
+Connecting to the database with pgadmin allows me to use SQL queries to have a look at the legacy_users data and decide what cleaning steps are necessary. 
+
+```
+@sql
+```
+SELECT * FROM legacy_users
+WHERE first_name = 'NULL' OR
+last_name = 'NULL' OR
+date_of_birth = 'NULL' OR
+company = 'NULL' OR
+email_address = null OR
+address = 'NULL' or
+country = 'NULL' OR
+country_code = 'NULL' OR
+phone_number = 'NULL' OR
+join_date = 'NULL' OR
+user_uuid = 'NULL';
+```
+
+shows that there are no rows with null in a single field, there are only entirely null rows. This means that I can remove those rows quite easily. 
+
+@sql
+```
+SELECT * FROM legacy_users
+WHERE  country NOT IN ('Germany', 'United Kingdom', 'United States');
+```
+The country column is the only column with fixed discrete answers. By filtering for all that don't match the exact spelling I can get another look.
+
+This list was interesting because it showed no mispellings of the country names. It left only NULL and rubbish data. It also showed no entries where the country was NULL or rubbish and the other columns were fine. This indicates again that we are cleaning only complete rows of NULL or rubbish, not individual fields which would be more complicated. 
+

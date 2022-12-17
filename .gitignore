@@ -1,0 +1,6 @@
+.db-data
+.pgadmin-data
+.dockerignore
+.env
+.vscode
+config
