@@ -32,3 +32,10 @@ class DatabaseConnector:
 
         # Return the list of table names
         return metadata.tables.keys()
+
+    def df_upload_to_db(df, tablename, engine):
+        try:
+            df.to_sql(f"{tablename}", engine)
+            return True
+        except:
+            return False
