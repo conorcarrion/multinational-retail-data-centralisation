@@ -27,9 +27,9 @@ class DataCleaner:
             except NumberParseException as e:
                 repr(e)
 
-        new_df = df.apply(lambda row: reformat_phone_number(row), axis=1)
-        df.head(5)
-        return new_df
+        df.apply(lambda row: reformat_phone_number(row), axis=1)
+
+        return df
 
     def df_clean_user_data(df):
 
@@ -46,8 +46,7 @@ class DataCleaner:
 
         # formatting the date to unambiguous xx NNN xxxx, eg 18 Dec 2022
 
-        df["date_of_birth"] = pd.to_datetime(
-            df["date_of_birth"], format=("%d %b %Y"), errors="raise"
-        )
+        # pd.to_datetime(df["date_of_birth"], format=("%d %b %Y"), errors="raise")
 
+        # pd.to_datetime(df["join_date"], format=("%d %b %Y"), errors="raise")
         return df
