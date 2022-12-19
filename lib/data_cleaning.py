@@ -1,6 +1,8 @@
 import datetime
+import re
 import phonenumbers
 import pandas as pd
+from phonenumbers import NumberParseException
 
 
 class DataCleaner:
@@ -14,28 +16,38 @@ class DataCleaner:
         pass
 
     def df_phone_number_clean(df):
-        df["phone_number"] = df["phone_number"].apply(lambda x: x.str.strip("().x"))
+        df.loc[:, "phone_number"].apply(lambda x: re.sub(r"[x.()]", "", x).lstrip("00"))
 
-        df = df.apply(
-            lambda row: phonenumbers.format_number(
-                phonenumbers.parse(row["phone_number"], row["country_code"]),
-                phonenumbers.PhoneNumberFormat.INTERNATIONAL,
-            ),
-            axis=1,
-        )
+        def reformat_phone_number(row):
+            try:
+                phonenumbers.format_number(
+                    (phonenumbers.parse(row["phone_number"], row["country_code"])),
+                    phonenumbers.PhoneNumberFormat.INTERNATIONAL,
+                )
+            except NumberParseException as e:
+                repr(e)
 
-    def df_date_clean(df, column):
-        df[f"{column}"] = pd.to_datetime(df[f"{column}"]).dt.strftime("%d %b %Y")
+        new_df = df.apply(lambda row: reformat_phone_number(row), axis=1)
+        df.head(5)
+        return new_df
 
     def df_clean_user_data(df):
 
         # Filtering by country to remove bad rows
         countries = ["Germany", "United Kingdom", "United States"]
-        df_filtered = df.loc[df["country"].isin(countries)]
+        df = df.loc[df["country"].isin(countries)]
+
+        # Update rows with country_code GBB to GB
+        ggb = df["country_code"] == "GGB"
+        df.loc[ggb, "country_code"] = "GB"
 
         # formatting the phone number based on country code
-        df_phone_clean = DataCleaner.phone_number_clean(df_filtered)
+        df = DataCleaner.df_phone_number_clean(df)
 
         # formatting the date to unambiguous xx NNN xxxx, eg 18 Dec 2022
-        df_dob_clean = DataCleaner.date_clean(df_phone_clean, "date_of_birth")
-        df_join_date_clean = DataCleaner.date_clean(df_dob_clean, "join_date")
+
+        df["date_of_birth"] = pd.to_datetime(
+            df["date_of_birth"], format=("%d %b %Y"), errors="raise"
+        )
+
+        return df

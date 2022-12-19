@@ -2,3 +2,4 @@ PyYAML
 SQLAlchemy
 pandas
 psycopg2-binary
+phonenumbers
