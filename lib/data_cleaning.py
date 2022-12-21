@@ -2,7 +2,6 @@ import datetime
 import re
 import phonenumbers
 import pandas as pd
-from phonenumbers import NumberParseException
 
 
 class DataCleaner:
@@ -15,24 +14,7 @@ class DataCleaner:
     def clean_s3_data():
         pass
 
-    def df_phone_number_clean(df):
-        df.loc[:, "phone_number"].apply(lambda x: re.sub(r"[x.()]", "", x).lstrip("00"))
-
-        def reformat_phone_number(row):
-            try:
-                phonenumbers.format_number(
-                    (phonenumbers.parse(row["phone_number"], row["country_code"])),
-                    phonenumbers.PhoneNumberFormat.INTERNATIONAL,
-                )
-            except NumberParseException as e:
-                repr(e)
-
-        df.apply(lambda row: reformat_phone_number(row), axis=1)
-
-        return df
-
-    def df_clean_user_data(df):
-
+    def df_remove_bad_data(df):
         # Filtering by country to remove bad rows
         countries = ["Germany", "United Kingdom", "United States"]
         df = df.loc[df["country"].isin(countries)]
@@ -41,12 +23,51 @@ class DataCleaner:
         ggb = df["country_code"] == "GGB"
         df.loc[ggb, "country_code"] = "GB"
 
+        return df
+
+    def df_phone_number_clean(df):
+        def reformat_phone_number(phone_number, country_code):
+
+            formatted_phone_number = phonenumbers.format_number(
+                (phonenumbers.parse(phone_number, country_code)),
+                phonenumbers.PhoneNumberFormat.E164,
+            )
+            return formatted_phone_number
+
+        def stripper(number):
+            number = re.sub("\D", "", number)
+            number = number.lstrip("00")
+            return number
+
+        df.loc[:, "phone_number"] = df["phone_number"].apply(stripper)
+        df.loc[:, "phone_number"] = df.apply(
+            lambda row: reformat_phone_number(row["phone_number"], row["country_code"]),
+            axis=1,
+        )
+
+        return df
+
+    def date_clean(date):
+        date = pd.to_datetime(date, errors="coerce")
+        date = date.strftime("%d %b %Y")
+        return date
+
+    def df_clean_user_data(df):
+
+        # Remove NULL and bad data rows
+        df = DataCleaner.df_remove_bad_data(df)
+
         # formatting the phone number based on country code
         df = DataCleaner.df_phone_number_clean(df)
 
         # formatting the date to unambiguous xx NNN xxxx, eg 18 Dec 2022
 
-        # pd.to_datetime(df["date_of_birth"], format=("%d %b %Y"), errors="raise")
+        df.loc[:, "date_of_birth"] = df.loc[:, "date_of_birth"].apply(
+            DataCleaner.date_clean
+        )
+        df.loc[:, "join_date"] = df.loc[:, "join_date"].apply(DataCleaner.date_clean)
 
-        # pd.to_datetime(df["join_date"], format=("%d %b %Y"), errors="raise")
+        # changing data types to appropriate type
+        df.loc[:, "country_code"] = df.loc[:, "country_code"].astype("category")
+
         return df
