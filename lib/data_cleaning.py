@@ -69,5 +69,6 @@ class DataCleaner:
 
         # changing data types to appropriate type
         df.loc[:, "country_code"] = df.loc[:, "country_code"].astype("category")
+        df.loc[:, "country"] = df.loc[:, "country"].astype("category")
 
         return df
