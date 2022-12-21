@@ -1,22 +1,6 @@
 version: "3.9"
 services:
-  app:
-    container_name: data-cent
-    image: python:latest
-    build: .
-    volumes:
-      - .:/code
-      
-  pgadmin:
-    container_name: pgadmin
-    image: dpage/pgadmin4:latest
-    ports:
-      - "5050:5050"
-    env_file:
-      - .env
-    volumes:
-      - .pgadmin-data:/var/lib/pgadmin
-    
+           
   db:
     container_name: db
     image: postgres:15.1-alpine
@@ -27,3 +11,18 @@ services:
       - .env
     volumes:
       - .db-data:/var/lib/postgresql/data
+
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4:latest
+    ports:
+      - "5050:5050"
+    env_file:
+      - .env
+
+  app:
+    container_name: data-cent
+    image: python:latest
+    build: .
+    volumes:
+      - .:/code
