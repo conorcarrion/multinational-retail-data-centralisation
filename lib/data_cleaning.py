@@ -2,6 +2,7 @@ import datetime
 import re
 import phonenumbers
 import pandas as pd
+import tabula
 
 
 class DataCleaner:
@@ -70,5 +71,40 @@ class DataCleaner:
         # changing data types to appropriate type
         df.loc[:, "country_code"] = df.loc[:, "country_code"].astype("category")
         df.loc[:, "country"] = df.loc[:, "country"].astype("category")
+
+        return df
+
+    def df_clean_card_data(df):
+        # drop first column (old index) and last column (all NaN)
+        df = df.drop(df.columns[[0, 6]], axis=1)
+        # drop all rows which are all NaN
+        df.dropna(how="all", inplace=True)
+
+        # identify rows that have been shifted (column 5 isnt null)
+        mask = df[5].notnull()
+        bad_rows = df[mask]
+
+        def fix_rows(row):
+            # explicit way to shift all rows to the left
+            row[0] = row[1]
+            row[1] = row[2]
+            row[2] = row[3]
+            row[3] = row[4]
+            row[4] = row[5]
+            row[5] = pd.isnull
+            return row
+
+        # apply the fix to each row in bad_rows
+        fixed_bad_rows = bad_rows.apply(lambda x: fix_rows(x), axis=1)
+
+        # update the original df with
+        df.update(fixed_bad_rows)
+        df = df.drop(df.columns[4], axis=1)
+        df.columns = df.iloc[0]
+        df = df.drop(1)
+
+        df.loc[:, "date_payment_confirmed"] = df.loc[:, "date_payment_confirmed"].apply(
+            DataCleaner.date_clean
+        )
 
         return df

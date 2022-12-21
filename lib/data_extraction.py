@@ -1,5 +1,6 @@
 import os
 import csv
+import tabula
 import pandas as pd
 
 
@@ -23,3 +24,8 @@ class DataExtractor:
             os.makedirs(directory)
 
         df.to_csv(os.path.join(directory, "data.csv"))
+
+    def retrieve_pdf_data(link):
+        df = tabula.read_pdf(link, pages="all", pandas_options={"header": None})
+        df = pd.concat(df, ignore_index=True)
+        return df
