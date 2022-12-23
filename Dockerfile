@@ -1,4 +1,4 @@
-FROM python:latest
+FROM rappdw/docker-java-python:latest
 
 WORKDIR /Data-Cent
 

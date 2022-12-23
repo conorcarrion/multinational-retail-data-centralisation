@@ -3,4 +3,4 @@ SQLAlchemy
 pandas
 psycopg2-binary
 phonenumbers
-tabular-py
+tabula-py

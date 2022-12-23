@@ -4,7 +4,6 @@ from lib.data_cleaning import DataCleaner
 
 
 class Main:
-
     def create_engines():
         aicore_credentials = DatabaseConnector.read_db_creds(
             "config/aicore_db_creds.yaml"
@@ -29,16 +28,25 @@ class Main:
             df_legacy_users_clean, "dim_users", sales_engine
         )
 
-    def create_dim_card_details()
-        card_details_link = 
-        df_legacy_card_details = DataExtractor.retrieve_pdf_data(card_details_link)
+    def create_dim_card_details(sales_engine):
+        aicore_s3_creds = DatabaseConnector.read_db_creds("config/aicore_S3_link.yaml")
+        aicore_s3_link = aicore_s3_creds["AWS_S3_LINK"]
+
+        df_legacy_card_details = DataExtractor.retrieve_pdf_data(aicore_s3_link)
+
+        df_legacy_card_details_clean = DataCleaner.df_clean_card_data(
+            df_legacy_card_details
+        )
+
+        DatabaseConnector.df_upload_to_db(
+            df_legacy_card_details_clean, "dim_card_details", sales_engine
+        )
 
     def run():
         aicore_engine, sales_engine = Main.create_engines()
 
         Main.create_dim_users(aicore_engine, sales_engine)
-
-
+        Main.create_dim_card_details(sales_engine)
 
 
 if __name__ == "__main__":

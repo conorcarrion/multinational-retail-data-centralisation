@@ -22,7 +22,7 @@ services:
 
   app:
     container_name: data-cent
-    image: python:latest
+    image: rappdw/docker-java-python:latest
     build: .
     volumes:
       - .:/code
