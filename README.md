@@ -115,3 +115,68 @@ new_df["length_of_no"].value_counts().sort_index()
 17     199
 Name: length_of_no, dtype: int64
 ```
+
+Note to self for starting after christmas:
+
+card details clean and upload works perfectly. Need to remove the index column and the data_0 column. 
+
+Need to write the readme for that whole milestone.
+
+### Cleaning Card Details
+
+#### Pdf file
+
+The card details came from a pdf file. To parse this information I used Tabula, a library for java which can read pdfs. To use it within python there is the tabula-py library. In order to use this I had to change my docker image for my app to one which has both java and python installed. I found this in the Docker hub. 
+
+#### Starting data
+
+df.head()
+
+|    |   0 | 1                | 2           | 3                           | 4                      |   5 |   6 |
+|---:|----:|:-----------------|:------------|:----------------------------|:-----------------------|----:|----:|
+|  0 | nan | nan              | nan         | nan                         | nan                    | nan | nan |
+|  1 | nan | card_number      | expiry_date | card_provider               | date_payment_confirmed | nan | nan |
+|  2 |   0 | 30060773296197   | 09/26       | Diners Club / Carte Blanche | 2015-11-25             | nan | nan |
+|  3 |   1 | 349624180933183  | 10/23       | American Express            | 2001-06-18             | nan | nan |
+|  4 |   2 | 3529023891650499 | 06/23       | JCB 16 digit                | 2000-12-26             | nan | nan |
+
+As we can see, there are a few issues to fix. I started by using df.dropna() to drop any rows or columns which were completely null. 
+
+This drops row 6 but not row 5, indicating there might be some data in row 5. 
+
+I initially used a technique to set the second row with the column headers as the column headers, however this caused the nan entries also to be pushed in. Instead I manually entered the column headers with df.columns = [] and dropped the headers row. I named the assorted columns data_0 and data_5 just for ease of accessing whilst cleaning.
+
+I wanted to inspect row 5, so I made a mask using df["data_5].notnull() which returns true for all rows which are not null. By then using df[mask] I can get all those rows. 
+
+The only one was row 56:
+```
+# data_0                                 NaN
+# card_number                           53.0
+# expiry_date               4131871381315066
+# card_provider                        03/27
+# date_payment_confirmed       VISA 16 digit
+# data_5                          2007-07-30
+# Name: 56, dtype: object
+```
+
+It seems the row has been shifted to the right. I wrote a function which moves all the data to the right place. I tried setting row["data_5"] = pd.NA, but I believe the update function (df.update()) will not overwrite real entries in this situation as a fail safe. Instead I simply set the whole column to pd.na then dropped it as before.
+
+Next I want to check for any remaining rows where 1 or more entries are null. Again I can use a mask of df.null(), mask.any(axis=1) and finally df.loc[mask] to view any rows containing 1 or more null values. 
+
+This reveals there are a block of rows where the card information is not entered correctly. The card number is in the data_0 column, and the rest of the information is concatenated in the card_number column. I wrote a function to fix this yet again, then used .apply() and .update() to correct the original dataframe.
+
+Finally I used the discrete category of the card_provider to find all the unique card_provider entries with df["card_provider"].unique. By manually creating from this list the legit card provider list, I then used df.loc[~df["card_provider].isin(legit_card_providers)] to reveal a lot of bad rows with nonsense information. I could then drop these by:
+```
+df = df.loc[df["card_provider"].isin(legit_card_providers)]
+```
+
+I then used the previously used date clean function to clean the date_payment_confirmed column to a legible format. This might not be the appropriate format but we will see what we want to use it for later and adjust as required. 
+
+Finally I used:
+
+```
+df.drop(columns="data_0", inplace=True)
+df.reset_index(drop=True, inplace=True)
+```
+
+to drop the data_0 column and reset the index given all our removed rows.

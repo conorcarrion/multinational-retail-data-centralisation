@@ -183,4 +183,6 @@ class DataCleaner:
             DataCleaner.date_clean
         )
 
+        df.drop(columns="data_0", inplace=True)
+
         return df
