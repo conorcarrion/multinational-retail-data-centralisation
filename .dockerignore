@@ -1,2 +1,5 @@
+.gitignore
 .pgadmin-data
 .db-data
+scratch.ipynb
+data-cent

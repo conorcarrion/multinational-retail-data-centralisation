@@ -94,7 +94,6 @@ class DataCleaner:
         ]
         # drop column headers from dataframe row 1
         df = df.drop(1)
-        df.reset_index(drop=True, inplace=True)
 
         # identify rows that have been shifted (column 5 isnt null)
         mask = df["data_5"].notnull()
@@ -184,5 +183,6 @@ class DataCleaner:
         )
 
         df.drop(columns="data_0", inplace=True)
+        df.reset_index(drop=True, inplace=True)
 
         return df
