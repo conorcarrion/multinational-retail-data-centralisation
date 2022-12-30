@@ -53,6 +53,10 @@ class DataCleaner:
         date = date.strftime("%d %b %Y")
         return date
 
+    def integer_purify(n):
+        x = re.sub(r"\D", "", n)
+        return x
+
     def df_clean_user_data(df):
 
         # Remove NULL and bad data rows
@@ -185,4 +189,50 @@ class DataCleaner:
         df.drop(columns="data_0", inplace=True)
         df.reset_index(drop=True, inplace=True)
 
+        return df
+
+    def df_clean_store_data(df):
+        # remove all null rows
+        df.dropna(how="all", inplace=True, axis=1)
+
+        # lat and index column has no information
+        df.drop(columns="lat", inplace=True)
+        df.drop(columns="index", inplace=True)
+
+        # removing bad rows by selecting only country codes that apply
+        legit_country_codes = [None, "GB", "DE", "US"]
+
+        df = df.loc[df["country_code"].isin(legit_country_codes)]
+
+        # moving the latitude column next to the longitude
+        latitude = df.pop("latitude")
+        df.insert(3, "latitude", latitude)
+
+        # moving the store_code column to far left
+        col_move = df.pop("store_code")
+        df.insert(0, "store_code", col_move)
+
+        # changing webstore na entries to pd.NA
+        df.loc[
+            0,
+            [
+                "address",
+                "longitude",
+                "latitude",
+                "locality",
+                "country_code",
+                "continent",
+            ],
+        ] = pd.NA
+
+        x = df.loc[:, "staff_numbers"].apply(DataCleaner.integer_purify)
+        df.update(x)
+
+        df.loc[df["continent"] == "eeEurope", "continent"] = "Europe"
+        df.loc[df["continent"] == "eeAmerica", "continent"] = "America"
+
+        df["continent"] = df["continent"].astype("category")
+        df["country_code"] = df["country_code"].astype("category")
+        df["store_type"] = df["store_type"].astype("category")
+        df["staff_numbers"] = df["staff_numbers"].astype("int64")
         return df

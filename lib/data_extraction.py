@@ -10,6 +10,15 @@ class DataExtractor:
         pass
 
     def API_list_number_of_stores(endpoint, headers):
+        """Retrieves the number of stores from the store API.
+
+        Args:
+            endpoint: the url for the get request
+            headers: a dict containing the api key
+
+        Returns:
+            integer of the number of stores
+        """
         r = requests.get(endpoint, headers=headers)
         return r.json()["number_stores"]
 
