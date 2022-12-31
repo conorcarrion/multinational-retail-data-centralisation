@@ -76,9 +76,7 @@ class Main:
 
         aicore_engine = DatabaseConnector.init_db_engine(aicore_credentials)
 
-        db_list = DatabaseConnector.list_db_tables(aicore_credentials)
-
-        print(db_list)
+        db_list = DatabaseConnector.list_db_tables(aicore_engine)
 
 
 if __name__ == "__main__":

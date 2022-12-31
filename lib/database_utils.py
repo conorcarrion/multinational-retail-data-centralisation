@@ -1,6 +1,6 @@
 import yaml
 import sqlalchemy
-from sqlalchemy import create_engine, MetaData
+from sqlalchemy import create_engine, inspect
 
 
 class DatabaseConnector:
@@ -27,11 +27,10 @@ class DatabaseConnector:
         return engine
 
     def list_db_tables(engine):
-        # Get the metadata for the database
-        metadata = MetaData(bind=engine)
-
-        # Return the list of table names
-        return metadata.tables.keys()
+        inspector = inspect(engine)
+        table_names = inspector.get_table_names()
+        for table_name in table_names:
+            print(table_name)
 
     def df_upload_to_db(df, tablename, engine):
         try:
