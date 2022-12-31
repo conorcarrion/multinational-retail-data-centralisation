@@ -180,3 +180,48 @@ df.reset_index(drop=True, inplace=True)
 ```
 
 to drop the data_0 column and reset the index given all our removed rows.
+
+
+
+### Dim Store Details clean up 
+
+df2["lat"].unique() gives:
+
+array(['N/A', None, '13KJZ890JH', '2XE1OWOC23', 'NULL', 'OXVE5QR07O',
+       'VKA5I8H32X', 'LACCWDI0SB', 'A3O5CBWAMD', 'UXMWDMX1LC'],
+      dtype=object)
+
+      therefore the column can be dropped.
+
+
+df2["country_code"].unique() gives: 
+array([None, 'GB', 'DE', 'US', 'YELVM536YT', 'FP8DLXQVGH', 'NULL',
+       'HMHIFNLOBN', 'F3AO8V2LHU', 'OH20I92LX3', 'OYVW925ZL8',
+       'B3EH2ZGQAV'], dtype=object)
+
+If we can cut the 'all' null rows, then fix the 'any' null rows, we can use GB/DE/US to cut any bad rows
+
+mask = df2.isnull()
+mask = mask.any(axis=1)
+any_null_rows = df2.loc[mask]
+
+reveals that the only row which has some entries which are null are store 0, the webstore. This means we can keep rows with country_code None, GB, DE, and US and this will remove the bad rows. We can check by making a mask of the inverse to see the rubbish lines.
+
+df2["continent"].unique() shows:
+
+array([None, 'Europe', 'America', 'eeEurope', 'eeAmerica'], dtype=object)
+
+df2["store_type"].unique()
+
+array(['Web Portal', 'Local', 'Super Store', 'Mall Kiosk', 'Outlet'],
+      dtype=object)
+
+      looks fine
+
+It makes more sense to have longitude and latitude next to each other, although they also seem like useless information but we will see what is required from the data. 
+
+The store code also seems like it should be the first column. 
+
+The index column has no rogue data in it, so can be dropped.
+
+the first row for the webstore can have pd.NA for all the N/A values for consistency. 

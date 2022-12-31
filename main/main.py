@@ -69,6 +69,17 @@ class Main:
         Main.create_dim_card_details(sales_engine)
         Main.create_dim_store_details(sales_engine)
 
+    def local():
+        aicore_credentials = DatabaseConnector.read_db_creds(
+            "config/aicore_db_creds.yaml"
+        )
+
+        aicore_engine = DatabaseConnector.init_db_engine(aicore_credentials)
+
+        db_list = DatabaseConnector.list_db_tables(aicore_credentials)
+
+        print(db_list)
+
 
 if __name__ == "__main__":
-    Main.run()
+    Main.local()
