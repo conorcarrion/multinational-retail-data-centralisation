@@ -1,6 +1,7 @@
 .gitignore
 .pgadmin-data
 .db-data
-scratch.ipynb
 data-cent
+stores.ipynb
 products.ipynb
+orders.ipynb

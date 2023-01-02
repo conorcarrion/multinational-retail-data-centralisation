@@ -6,16 +6,7 @@ import tabula
 
 
 class DataCleaner:
-    def clean_csv_data():
-        pass
-
-    def clean_api_data():
-        pass
-
-    def clean_s3_data():
-        pass
-
-    def df_remove_bad_data(df):
+    def df_remove_bad_countries(df):
         # Filtering by country to remove bad rows
         countries = ["Germany", "United Kingdom", "United States"]
         df = df.loc[df["country"].isin(countries)]
@@ -60,7 +51,7 @@ class DataCleaner:
     def df_clean_user_data(df):
 
         # Remove NULL and bad data rows
-        df = DataCleaner.df_remove_bad_data(df)
+        df = DataCleaner.df_remove_bad_countries(df)
 
         # formatting the phone number based on country code
         df = DataCleaner.df_phone_number_clean(df)
@@ -236,3 +227,109 @@ class DataCleaner:
         df["store_type"] = df["store_type"].astype("category")
         df["staff_numbers"] = df["staff_numbers"].astype("int64")
         return df
+
+    def df_clean_orders_data(df):
+        df.drop(columns="1", inplace=True)
+        df.drop(columns="first_name", inplace=True)
+        df.drop(columns="last_name", inplace=True)
+        return df
+
+    def df_clean_products_data(df):
+
+        # from df["category"].unique()
+        legit_category = [
+            "toys-and-games",
+            "sports-and-leisure",
+            "pets",
+            "homeware",
+            "health-and-beauty",
+            "food-and-drink",
+            "diy",
+        ]
+        mask = df["category"].isin(legit_category)
+
+        # by viewing df[~mask] can look at bad rows and confirm they can be dropped
+        df = df[mask]
+
+        # spelling and formatting
+        df.loc[df["removed"] == "Still_avaliable", "removed"] = "Available"
+
+        # price column clean
+        df.loc[:, "product_price"] = (
+            df["product_price"].str.replace("£", "").astype(float)
+        )
+
+        # drop Unnamed and reset index
+        df.drop(columns="Unnamed: 0", inplace=True)
+        df.reset_index(drop=True, inplace=True)
+
+        # see weight_clean function for changes.
+
+        df[["units_in_product", "unit_weight", "product_weight"]] = pd.DataFrame(
+            df["weight"].apply(DataCleaner.product_weight_clean).tolist(),
+            columns=["units_in_product", "unit_weight", "product_weight"],
+        )
+
+        # reorganise columns
+        df = df.reindex(
+            columns=[
+                "product_name",
+                "product_code",
+                "product_price",
+                "category",
+                "EAN",
+                "date_added",
+                "uuid",
+                "units_in_product",
+                "unit_weight",
+                "product_weight",
+                "removed",
+            ]
+        )
+
+        return df
+
+    def product_weight_clean(x):
+
+        # "5 x 120g"
+        if "x" in x:
+            unit, weight = x.split(" x ")
+            unit_weight = weight.rstrip("g")
+            unit = int(unit)
+            unit_weight = float(unit_weight)
+            product_weight = unit * unit_weight
+            return [unit, unit_weight, product_weight]
+
+        # "1.6kg"
+        elif "k" in x:
+            x = x.rstrip("kg")
+            x = float(x)
+            return [1, x, x]
+
+        # "200ml"
+        elif "ml" in x:
+            x = x.rstrip("ml")
+            x = float(x)
+            return [1, x, x]
+
+        # 1 value has "77g ." thanks blair
+        elif "g ." in x:
+            x = x.rstrip("g .")
+            x = float(x)
+            x = x / 1000
+            return [1, x, x]
+
+        # 200g
+        elif "g" in x:
+            x = x.rstrip("g")
+            x = float(x)
+            x = x / 1000
+            return [1, x, x]
+
+        # 16oz
+        elif "oz" in x:
+            x = x.rstrip("oz")
+            x = float(x)
+            x = 28.3495 * x  # conversion from oz to g
+            x = round(x, 4)
+            return [1, x, x]

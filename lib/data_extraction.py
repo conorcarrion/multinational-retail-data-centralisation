@@ -3,11 +3,18 @@ import csv
 import requests
 import tabula
 import pandas as pd
+import boto3
+from botocore import UNSIGNED
+from botocore.client import Config
 
 
 class DataExtractor:
-    def extract_from_csv():
-        pass
+    def extract_from_public_s3(bucket, key):
+        s3 = boto3.client("s3", config=Config(signature_version=UNSIGNED))
+        response = s3.get_object(Bucket="data-handling-public", Key="products.csv")
+
+        df = pd.read_csv(response.get("Body"))
+        return df
 
     def API_list_number_of_stores(endpoint, headers):
         """Retrieves the number of stores from the store API.

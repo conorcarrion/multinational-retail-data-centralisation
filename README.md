@@ -225,3 +225,43 @@ The store code also seems like it should be the first column.
 The index column has no rogue data in it, so can be dropped.
 
 the first row for the webstore can have pd.NA for all the N/A values for consistency. 
+
+### Products
+
+By using boto3 I imported a csv in an s3 bucket into a pandas dataframe. First by creating the boto3 client and then by using s3.get_object to create a response from the server. Then using pd.read_csv on the body of the response. 
+
+The data looks like this:
+
+"|    |   Unnamed: 0 | product_name                                | product_price   | weight   | category       |           EAN | date_added   | uuid                                 | removed         | product_code   |\n|---:|-------------:|:--------------------------------------------|:----------------|:---------|:---------------|--------------:|:-------------|:-------------------------------------|:----------------|:---------------|\n|  0 |            0 | FurReal Dazzlin' Dimples My Playful Dolphin | £39.99          | 1.6kg    | toys-and-games | 7425710935115 | 2005-12-02   | 83dc0a69-f96f-4c34-bcb7-928acae19a94 | Still_avaliable | R7-3126933h    |\n|  1 |            1 | Tiffany's World Day Out At The Park         | £12.99          | 0.48kg   | toys-and-games |  487128731892 | 2006-01-09   | 712254d7-aea7-4310-aff8-8bcdd0aec7ff | Still_avaliable | C2-7287916l    |\n|  2 |            2 | Tiffany's World Pups Picnic Playset         | £7.00           | 590g     | toys-and-games | 1945816904649 | 1997-03-29   | b089ef6f-b628-4e37-811d-fffe0102ba64 | Still_avaliable | S7-1175877v    |\n|  3 |            3 | Tiffany's World Wildlife Park Adventures    | £12.99          | 540g     | toys-and-games | 1569790890899 | 2013-03-20   | d55de422-8b98-47d6-9991-e4bc4c5c0cb0 | Removed         | D8-8421505n    |\n|  4 |            4 | Cosatto Cosy Dolls Pram                     | £30.00          | 1.91kg   | toys-and-games | 7142740213920 | 2007-12-23   | 7945b657-cb02-4cc5-96cf-f65ed0a8f235 | Still_avaliable | B6-2596063a    |"
+
+Removing bad or nan rows via discrete category:
+
+```
+# reveal all the categories
+df["category"].unique()
+
+# cut out any bad categories
+legit_category = ['toys-and-games', 'sports-and-leisure', 'pets', 'homeware','health-and-beauty',
+       'food-and-drink', 'diy']
+
+# create a mask
+mask = df["category"].isin(legit_category)
+
+# checking this first to see bad rows (~ inverse mask)
+df[~mask]
+
+# making df equal to df without those rows
+df = df[mask]
+```
+
+
+
+
+### Orders
+
+by checking if the product_quantity and index columns can be converted to integers with coerce, then checking for any null values (coerce changes non integers to NaN), I ascertained that there are no rows with rubbish data.
+
+
+
+
+
