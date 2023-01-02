@@ -7,7 +7,7 @@ class DatabaseConnector:
     def __init__(self) -> None:
         pass
 
-    def read_db_creds(path):
+    def load_yaml(path):
         with open(path, "r") as outfile:
             # Load the contents of the file as a dictionary
             credentials = yaml.safe_load(outfile)
@@ -31,6 +31,7 @@ class DatabaseConnector:
         table_names = inspector.get_table_names()
         for table_name in table_names:
             print(table_name)
+        return table_names
 
     def df_upload_to_db(df, tablename, engine):
         try:

@@ -5,12 +5,8 @@ from lib.data_cleaning import DataCleaner
 
 class Main:
     def create_engines():
-        aicore_credentials = DatabaseConnector.read_db_creds(
-            "config/aicore_db_creds.yaml"
-        )
-        sales_credentials = DatabaseConnector.read_db_creds(
-            "config/sales_db_creds.yaml"
-        )
+        aicore_credentials = DatabaseConnector.load_yaml("config/aicore_db_creds.yaml")
+        sales_credentials = DatabaseConnector.load_yaml("config/sales_db_creds.yaml")
 
         aicore_engine = DatabaseConnector.init_db_engine(aicore_credentials)
         sales_engine = DatabaseConnector.init_db_engine(sales_credentials)
@@ -20,19 +16,19 @@ class Main:
 
         df_legacy_users = DataExtractor.extract_rds_table(aicore_engine, "legacy_users")
 
-        df_legacy_users_clean = DataCleaner.df_clean_user_data(df_legacy_users)
+        df_legacy_users_clean = DataCleaner.clean_users_df(df_legacy_users)
 
         DatabaseConnector.df_upload_to_db(
             df_legacy_users_clean, "dim_users", sales_engine
         )
 
     def create_dim_card_details(sales_engine):
-        aicore_s3_creds = DatabaseConnector.read_db_creds("config/aicore_S3_link.yaml")
-        aicore_s3_link = aicore_s3_creds["AWS_S3_LINK"]
+        s3_pdf_link = DatabaseConnector.load_yaml("config/s3_card_details_pdf.yaml")
+        s3_pdf_card_details = s3_pdf_link["AWS_S3_LINK"]
 
-        df_legacy_card_details = DataExtractor.retrieve_pdf_data(aicore_s3_link)
+        df_legacy_card_details = DataExtractor.retrieve_pdf_data(s3_pdf_card_details)
 
-        df_legacy_card_details_clean = DataCleaner.df_clean_card_data(
+        df_legacy_card_details_clean = DataCleaner.clean_card_details_df(
             df_legacy_card_details
         )
 
@@ -41,7 +37,7 @@ class Main:
         )
 
     def create_dim_store_details(sales_engine):
-        api_credentials = DatabaseConnector.read_db_creds("config/aicore_api_key.yaml")
+        api_credentials = DatabaseConnector.load_yaml("config/aicore_api_key.yaml")
         headers = {"x-api-key": api_credentials["x-api-key"]}
         get_store_endpoint = api_credentials["get-store"]
         get_num_stores_endpoint = api_credentials["get-num-stores"]
@@ -54,7 +50,7 @@ class Main:
             get_store_endpoint, headers, number_of_stores
         )
 
-        df_legacy_store_details = DataCleaner.df_clean_store_data(
+        df_legacy_store_details = DataCleaner.clean_store_details_df(
             df_legacy_store_details
         )
 
@@ -64,13 +60,15 @@ class Main:
 
     def create_products_table(sales_engine):
 
-        products_creds = DatabaseConnector.read_db_creds("config/aicore_s3_public.yaml")
+        products_creds = DatabaseConnector.load_yaml(
+            "config/s3_product_details_csv.yaml"
+        )
 
         df_legacy_product_table = DataExtractor.extract_from_public_s3(
             products_creds["Bucket"], products_creds["Key"]
         )
 
-        df_legacy_product_table = DataCleaner.df_clean_products_table(
+        df_legacy_product_table = DataCleaner.clean_products_table_df(
             df_legacy_product_table
         )
 
@@ -83,7 +81,7 @@ class Main:
             aicore_engine, "orders_table"
         )
 
-        df_legacy_orders_table = DataCleaner.df_clean_orders_data(
+        df_legacy_orders_table = DataCleaner.clean_orders_table_df(
             df_legacy_orders_table
         )
 
@@ -93,22 +91,20 @@ class Main:
 
     def run():
         aicore_engine, sales_engine = Main.create_engines()
+        table_names = DatabaseConnector.list_db_tables(sales_engine)
 
-        Main.create_dim_users(aicore_engine, sales_engine)
-        Main.create_dim_card_details(sales_engine)
-        Main.create_dim_store_details(sales_engine)
-        Main.create_products_table(sales_engine)
-        Main.create_orders_table(sales_engine)
+        function_table = {
+            "dim_users": Main.create_dim_users,
+            "dim_card_details": Main.create_dim_card_details,
+            "dim_store_details": Main.create_dim_store_details,
+            "products_table": Main.create_products_table,
+            "orders_table": Main.create_orders_table,
+        }
 
-    def local_db_list():
-        aicore_credentials = DatabaseConnector.read_db_creds(
-            "config/aicore_db_creds.yaml"
-        )
-
-        aicore_engine = DatabaseConnector.init_db_engine(aicore_credentials)
-
-        DatabaseConnector.list_db_tables(aicore_engine)
+        for table, function in function_table.items():
+            if table not in table_names:
+                function(aicore_engine, sales_engine)
 
 
 if __name__ == "__main__":
-    Main.local_db_list()
+    Main.run()

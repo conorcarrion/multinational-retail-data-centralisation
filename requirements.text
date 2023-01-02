@@ -5,3 +5,4 @@ psycopg2-binary
 phonenumbers
 tabula-py
 boto3
+requests

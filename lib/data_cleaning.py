@@ -48,7 +48,7 @@ class DataCleaner:
         x = re.sub(r"\D", "", n)
         return x
 
-    def df_clean_user_data(df):
+    def clean_users_df(df):
 
         # Remove NULL and bad data rows
         df = DataCleaner.df_remove_bad_countries(df)
@@ -69,7 +69,7 @@ class DataCleaner:
 
         return df
 
-    def df_clean_card_data(df):
+    def clean_card_details_df(df):
 
         # drop all rows and columns which are all NaN
         df.dropna(how="all", inplace=True, axis=1)
@@ -182,7 +182,7 @@ class DataCleaner:
 
         return df
 
-    def df_clean_store_data(df):
+    def clean_store_details_df(df):
         # remove all null rows
         df.dropna(how="all", inplace=True, axis=1)
 
@@ -228,13 +228,13 @@ class DataCleaner:
         df["staff_numbers"] = df["staff_numbers"].astype("int64")
         return df
 
-    def df_clean_orders_data(df):
+    def clean_orders_table_df(df):
         df.drop(columns="1", inplace=True)
         df.drop(columns="first_name", inplace=True)
         df.drop(columns="last_name", inplace=True)
         return df
 
-    def df_clean_products_data(df):
+    def clean_products_table_df(df):
 
         # from df["category"].unique()
         legit_category = [
