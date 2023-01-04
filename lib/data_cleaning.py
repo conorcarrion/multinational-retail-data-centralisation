@@ -182,6 +182,31 @@ class DataCleaner:
 
         return df
 
+    def clean_card_details_df_simple(df):
+        legit_card_providers = [
+            "Diners Club / Carte Blanche",
+            "American Express",
+            "JCB 16 digit",
+            "JCB 15 digit",
+            "Maestro",
+            "Mastercard",
+            "Discover",
+            "VISA 16 digit",
+            "VISA 19 digit",
+            "VISA 13 digit",
+        ]
+        df.columns = [
+            "card_number",
+            "expiry_date",
+            "card_provider",
+            "date_payment_confirmed",
+        ]
+        df = df.loc[df["card_provider"].isin(legit_card_providers)]
+
+        df.loc[:, "card_number"] = df["card_number"].str.replace("?", "", regex=False)
+
+        return df
+
     def clean_store_details_df(df):
         # remove all null rows
         df.dropna(how="all", inplace=True, axis=1)
@@ -333,3 +358,9 @@ class DataCleaner:
             x = 28.3495 * x  # conversion from oz to g
             x = round(x, 4)
             return [1, x, x]
+
+    def clean_date_data_df(df):
+        legit_time_periods = ["Evening", "Morning", "Midday", "Late_Hours"]
+
+        df = df.loc[df["time_period"].isin(legit_time_periods)]
+        return df

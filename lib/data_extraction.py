@@ -64,3 +64,7 @@ class DataExtractor:
         df = tabula.read_pdf(link, pages="all", pandas_options={"header": None})
         df = pd.concat(df, ignore_index=True)
         return df
+
+    def extract_json_data(link):
+        df = pd.read_json(link)
+        return df

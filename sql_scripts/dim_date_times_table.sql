@@ -1,0 +1,7 @@
+ALTER TABLE dim_date_times
+    DROP COLUMN index,
+    ALTER COLUMN day TYPE VARCHAR(2),
+	ALTER COLUMN month TYPE VARCHAR(2),
+	ALTER COLUMN year TYPE CHAR(4),
+	ALTER COLUMN time_period TYPE VARCHAR(12),
+	ALTER COLUMN date_uuid TYPE UUID USING date_uuid::uuid;
