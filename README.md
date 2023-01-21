@@ -53,18 +53,16 @@ def df_extract_rds_table(engine, table_name):
 
 ### Data Cleaning
 
-I had 6 datasets to explore, clean and reformat before uploading them to my postgres database for analysis: User info, credit card details, datetime events, product info, store details and finally the orders table which would be the centre table linking to the others in a star schema. 
-
-# Disclaimer
-
 For the sake of learning, I used a combination of different tools to explore, clean and format the tables. Sometimes I used pandas and sometimes I used pgadmin and SQL queries, sometimes both. What I did is not a recommendation for a pipeline, but merely to show my ability to use both. 
+
+I had 6 datasets to explore, clean and reformat before uploading them to my postgres database for analysis: User info, credit card details, datetime events, product info, store details and finally the orders table which would be the centre table linking to the others in a star schema. 
 
 #### User table
 
 As the user data was in an AWS RDS server, I could connect to it directly with pgadmin. This allows me to use SQL queries to have a look at the legacy_users data and decide what cleaning steps are necessary. 
 
-@sql
-```
+
+```sql
 SELECT * FROM legacy_users
 WHERE first_name = 'NULL' OR
 last_name = 'NULL' OR
