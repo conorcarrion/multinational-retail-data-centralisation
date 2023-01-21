@@ -2,15 +2,16 @@
 ## Milestone 1
 
 As I started this project I wanted to do everything in Docker as I have used this tool a lot recently and know it is used ubiquitously throughout industry. 
-I started by finding the Docker images for postgres and pgadmin4 and seeing if I could do what I wanted. After finding the images I coudld not work out why I couldn't access the pgadmin container via localhost:5000 or 5050 or any port I tried to set it to. In the end I managed to make it work by setting PGADMIN_LISTEN_ADDRESS=0.0.0.0 in the environment variables. I think the default was [::], which perhaps does not work on my OS Ubuntu.
+I started by finding the Docker images for postgres and pgadmin4 and seeing if I could do what I wanted. After finding the images and running a docker compose, I couldn't access the pgadmin container via localhost:5000 or any port I tried to set it to. In the end I managed to make it work by setting PGADMIN_LISTEN_ADDRESS=0.0.0.0 in the environment variables. I think the default was [::], which perhaps does not work on my OS, Ubuntu.
 I created a .env file for all the details adding PGADMIN_LISTEN_PORT=5050 and PGADMIN_LISTEN_ADDRESS=0.0.0.0 to the environment variables. This changed the access address from the default [::]:80 to 0.0.0.0:5050. Once I was connected I managed to connect to the postgres container by simply accessing the name of the container I had selected, a useful feature of Docker. 
 
 ```
 PGADMIN_DEFAULT_EMAIL=cjq234@gmail.com
 PGADMIN_DEFAULT_PASSWORD=pgpassword
-POSTGRES_PASSWORD=pgpassword
 PGADMIN_LISTEN_PORT=5050
 PGADMIN_LISTEN_ADDRESS=0.0.0.0
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=pgpassword
 ```
 
 I proceeded to set up the Docker Compose file and Dockerfile to boot the containers as I wanted with volumes for each. Next I added a third container for my python script, I will need to add more details to it as I work out which ports I will need to use. 
@@ -18,6 +19,8 @@ I proceeded to set up the Docker Compose file and Dockerfile to boot the contain
 ## Milestone 2
 
 I created 3 python files for 3 classes of components of my pipeline. A data extractor, a data connector and a data cleaner. I started writing methods for each. I began by writing a method to load my database credentials from a yaml file. Then I created a method to instantiate my SQLAlchemy engine with the credentials from the previous method. 
+
+*read_db_creds later renamed load_yaml as used for different tasks. Credentials added as an argument for init_db_engine allowing multiple engines from different credentials.
 
 ```
     def read_db_creds():
@@ -40,7 +43,7 @@ I created 3 python files for 3 classes of components of my pipeline. A data extr
         return engine
 
 ```
-For the data extractor module, I wrote a method which takes arguments of the table name and the sqlalchemy engine and runs a query to the database for this entire table (SELECT * FROM <table_name>)and converts it to a Pandas dataframe. This method is not available for SQLalchemy 2.0, so I am not using future=true in the sqlalchemy create_engine. This method seems insanely useful and I am not sure what they are replacing it with.
+For the data extractor module, I wrote a method which, with arguments of the table name and the sqlalchemy engine, runs a query to the database for the entire table provided (SELECT * FROM <table_name>)and converts it to a Pandas dataframe. This method is not available for SQLalchemy 2.0, so I removed argument future=true in the sqlalchemy create_engine method which I had taken from the documentation.
 
 ```
 def df_extract_rds_table(engine, table_name):
@@ -48,13 +51,18 @@ def df_extract_rds_table(engine, table_name):
         return df
 ```
 
-### Exploratory Data analysis
+### Data Cleaning
 
-#### Null and Rubbish data
+I had 6 datasets to explore, clean and reformat before uploading them to my postgres database for analysis: User info, credit card details, datetime events, product info, store details and finally the orders table which would be the centre table linking to the others in a star schema. 
 
-Connecting to the database with pgadmin allows me to use SQL queries to have a look at the legacy_users data and decide what cleaning steps are necessary. 
+# Disclaimer
 
-```
+For the sake of learning, I used a combination of different tools to explore, clean and format the tables. Sometimes I used pandas and sometimes I used pgadmin and SQL queries, sometimes both. What I did is not a recommendation for a pipeline, but merely to show my ability to use both. 
+
+#### User table
+
+As the user data was in an AWS RDS server, I could connect to it directly with pgadmin. This allows me to use SQL queries to have a look at the legacy_users data and decide what cleaning steps are necessary. 
+
 @sql
 ```
 SELECT * FROM legacy_users

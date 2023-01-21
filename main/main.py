@@ -1,6 +1,7 @@
 from lib.database_utils import DatabaseConnector
 from lib.data_extraction import DataExtractor
 from lib.data_cleaning import DataCleaner
+import os
 
 
 class Main:
@@ -110,6 +111,24 @@ class Main:
         for table, function in function_table.items():
             if table not in table_names:
                 function(aicore_engine, sales_engine)
+
+        Main.run_sql_scripts(sales_engine)
+
+    def run_sql_scripts(engine):
+        path = os.path.join(os.getcwd(), "sql_scripts")
+        files = os.listdir(path)
+        files.sort()
+        for file in files:
+            file_path = os.path.join(path, file)
+            with open(file_path, "r") as f:
+                # Read the contents of the file
+                sql = f.read()
+                # Execute the SQL command
+                try:
+                    engine.execute(sql)
+
+                except:
+                    print(file_path)
 
 
 if __name__ == "__main__":

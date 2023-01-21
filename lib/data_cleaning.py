@@ -76,8 +76,7 @@ class DataCleaner:
         df.dropna(how="all", inplace=True, axis=0)
 
         # column 0 and column 5 not dropped so may still contain important information
-        # first row is the headers, column 0 and 5 renamed for convenience before
-        # setting the column headers to that row, then dropping it.
+        # first row is the headers, column 0 and 5 renamed for convenience
 
         df.columns = [
             "data_0",

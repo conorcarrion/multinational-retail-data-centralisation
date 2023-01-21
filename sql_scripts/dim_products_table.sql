@@ -21,8 +21,8 @@ ALTER TABLE dim_products_table
 	ALTER COLUMN product_code TYPE VARCHAR(12),
 	ALTER COLUMN date_added TYPE DATE USING date_added::date,
 	ALTER COLUMN uuid TYPE UUID USING uuid::uuid,
-	ALTER COLUMN weight_class TYPE VARCHAR(15)
-    ALTER COLUMN unit_weight TYPE SMALLINT;
+	ALTER COLUMN weight_class TYPE VARCHAR(15),
+    ALTER COLUMN unit_weight TYPE SMALLINT,
     ALTER COLUMN units_in_product TYPE SMALLINT;
 
 UPDATE dim_products_table
@@ -34,4 +34,5 @@ SET still_available =
     END;
 
 ALTER TABLE dim_products_table
-    ALTER COLUMN still_available TYPE bool;
+    ALTER COLUMN still_available TYPE bool
+	USING still_available::boolean;
