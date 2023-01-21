@@ -22,7 +22,7 @@ I created 3 python files for 3 classes of components of my pipeline. A data extr
 
 *read_db_creds later renamed load_yaml as used for different tasks. Credentials added as an argument for init_db_engine allowing multiple engines from different credentials.
 
-```
+```python
     def read_db_creds():
         with open("config/db_creds.yaml", "r") as outfile:
             # Load the contents of the file as a dictionary
@@ -45,7 +45,7 @@ I created 3 python files for 3 classes of components of my pipeline. A data extr
 ```
 For the data extractor module, I wrote a method which, with arguments of the table name and the sqlalchemy engine, runs a query to the database for the entire table provided (SELECT * FROM <table_name>)and converts it to a Pandas dataframe. This method is not available for SQLalchemy 2.0, so I removed argument future=true in the sqlalchemy create_engine method which I had taken from the documentation.
 
-```
+```python
 def df_extract_rds_table(engine, table_name):
         df = pd.read_sql(f"SELECT * FROM {table_name}", engine)
         return df
@@ -57,9 +57,9 @@ For the sake of learning, I used a combination of different tools to explore, cl
 
 I had 6 datasets to explore, clean and reformat before uploading them to my postgres database for analysis: User info, credit card details, datetime events, product info, store details and finally the orders table which would be the centre table linking to the others in a star schema. 
 
-#### User table
+#### User details
 
-As the user data was in an AWS RDS server, I could connect to it directly with pgadmin. This allows me to use SQL queries to have a look at the legacy_users data and decide what cleaning steps are necessary. 
+As the user details data was in an AWS RDS server, I could connect to it directly with pgadmin. This allowed me to use SQL queries to have a look at the legacy_users data and decide what cleaning steps are necessary. 
 
 
 ```sql
@@ -68,8 +68,8 @@ WHERE first_name = 'NULL' OR
 last_name = 'NULL' OR
 date_of_birth = 'NULL' OR
 company = 'NULL' OR
-email_address = null OR
-address = 'NULL' or
+email_address = 'NULL' OR
+address = 'NULL' OR
 country = 'NULL' OR
 country_code = 'NULL' OR
 phone_number = 'NULL' OR
@@ -77,37 +77,34 @@ join_date = 'NULL' OR
 user_uuid = 'NULL';
 ```
 
-shows that there are no rows with null in a single field, there are only entirely null rows. This means that I can remove those rows quite easily. 
+The above SQL query showed that there are no rows with null in a single field, there are only entirely null rows. I can safely remove those rows. To isolate those rows, I can use a column with discrete values with low number of unique options:
 
-@sql
-```
+
+```sql
 SELECT * FROM legacy_users
-WHERE  country NOT IN ('Germany', 'United Kingdom', 'United States');
+WHERE country NOT IN ('Germany', 'United Kingdom', 'United States');
 ```
-The country column is the only column with fixed discrete answers. By filtering for all that don't match the exact spelling I can get another look.
 
-This list was interesting because it showed no mispellings of the country names. It left only NULL and rubbish data. It also showed no entries where the country was NULL or rubbish and the other columns were fine. This indicates again that we are cleaning only complete rows of NULL or rubbish, not individual fields which would be more complicated. 
+This query was interesting because it left only NULL and rubbish data. It also showed no entries where the country was NULL or rubbish and the other columns were fine. This indicates again that we are cleaning only complete rows of NULL or rubbish, not individual fields which would be more complicated. 
 
-As there are so many rows, further exploration will have to be done with Pandas by loading the database into a dataframe.
+Further exploration will be done with Pandas by loading the database into a dataframe.
 
-#### Phone numbers
+##### Phone numbers
+The phone numbers had all sorts of non-integer characters in them which needede to be removed. By using regex I used re.sub and the inverse character \D to remove all non-integers from the number (D is integers in regex). I used a python library called phonenumbers to parse and format the phone numbers, using the country_code as an argument to format them based on their country code. 
 
-The phone numbers have all sorts of non-integer characters in them which need to be removed. By using regex I can use re.sub and the inverse character \D to remove all non-integers from the number. I used a python library called phonenumbers to parse and format the phone numbers, using the country_code as an argument to format them based on their country code. 
+##### Dates
+How to format date columns is open to interpretation as it depends what sort of analytical queries we might want to run. Having them in datetime formats is useful for the calculation of timespan from those dates, say for promotional offers, however if human legibility is preferable, then a string of dd MMM yyyy, eg 29 Dec 2022 is the least ambiguous internationally. 
 
-#### Dates
-
-How to format the date of birth and join date columns is open to interpretation as it depends how we will need it for analysis. Having them in datetime formats is useful for calculation timespan from those dates which may be used for promotional offers, however if human legibility is preferable, then a string of dd MMM yyyy, eg 29 Dec 2022 is the least ambiguous internationally. I will leave it for now and if we need to change it later we can do so.
-
-#### Data types
-
+##### Data types
 Aside from dates, the only entries which should not be strings are the country and country_codes which should be category type. By using pd.astype() I changed these as required.
 
 #### N/A of any invalid data 
 
-```
+```python
 new_df["length_of_no"] = new_df.loc[:, "phone_number"].apply(len)
 
 new_df["length_of_no"].value_counts().sort_index()
+
 
 8        1
 9        2
