@@ -163,38 +163,21 @@ to drop the data_0 column and reset the index given all our removed rows.
 
 ### Dim Store Details clean up 
 
-   index                                            address longitude   lat  \
-0      0                                                N/A       N/A   N/A   
-1      1  Flat 72W\nSally isle\nEast Deantown\nE7B 8EB, ...  51.62907  None   
-2      2        Heckerstraße 4/5\n50491 Säckingen, Landshut  48.52961  None   
-3      3  5 Harrison tunnel\nSouth Lydia\nWC9 2BE, Westbury     51.26  None   
-4      4  Studio 6\nStephen landing\nSouth Simon\nB77 2W...   53.0233  None   
+df2["lat"].unique()
 
-       locality    store_code staff_numbers opening_date   store_type  \
-0           N/A  WEB-1388012W           325   2010-06-12   Web Portal   
-1  High Wycombe   HI-9B97EE4E            34   1996-10-25        Local   
-2      Landshut   LA-0772C7B9            92   2013-04-12  Super Store   
-3      Westbury   WE-1DE82CEE            69   2014-01-02  Super Store   
-4        Belper   BE-18074576            35   2019-09-09        Local   
-
-   latitude country_code continent  
-0      None         None      None  
-1  -0.74934           GB    Europe  
-2  12.16179           DE    Europe  
-3   -2.1875           GB    Europe  
-4  -1.48119           GB    Europe  
-
-`df2["lat"].unique()`:
-`array(['N/A', None, '13KJZ890JH', '2XE1OWOC23', 'NULL', 'OXVE5QR07O',
+array(['N/A', None, '13KJZ890JH', '2XE1OWOC23', 'NULL', 'OXVE5QR07O',
        'VKA5I8H32X', 'LACCWDI0SB', 'A3O5CBWAMD', 'UXMWDMX1LC'],
-      dtype=object)`
+      dtype=object)
+
 Since it had no useful information, the column was dropped.
 
 
 df2["country_code"].unique() gives: 
-`array([None, 'GB', 'DE', 'US', 'YELVM536YT', 'FP8DLXQVGH', 'NULL',
+```
+array([None, 'GB', 'DE', 'US', 'YELVM536YT', 'FP8DLXQVGH', 'NULL',
        'HMHIFNLOBN', 'F3AO8V2LHU', 'OH20I92LX3', 'OYVW925ZL8',
-       'B3EH2ZGQAV'], dtype=object)`
+       'B3EH2ZGQAV'], dtype=object)
+```
 
 If we can cut the 'all' null rows, then fix the 'any' null rows, we can use GB/DE/US to cut any unwanted bad data rows.
 
@@ -203,6 +186,7 @@ mask = df2.isnull()
 mask = mask.any(axis=1)
 any_null_rows = df2.loc[mask]
 ```
+
 reveals that the only row which has some null entries are store 0, the webstore. This means we can keep rows with `country_code is in [None, GB, DE, and US]` and this will remove the bad rows. We can check by making a mask of the inverse to see the rubbish lines.
 
 ```python
