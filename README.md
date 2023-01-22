@@ -1,5 +1,6 @@
 # Multinational Retail Data Centralisation Project
-## Milestone 1
+
+## Introduction
 
 As I started this project I wanted to do everything in Docker as I have used this tool a lot recently and know it is used ubiquitously throughout industry. 
 I started by finding the Docker images for postgres and pgadmin4 and seeing if I could do what I wanted. After finding the images and running a docker compose, I couldn't access the pgadmin container via localhost:5000 or any port I tried to set it to. In the end I managed to make it work by setting PGADMIN_LISTEN_ADDRESS=0.0.0.0 in the environment variables. I think the default was [::], which perhaps does not work on my OS, Ubuntu.
@@ -16,11 +17,13 @@ POSTGRES_PASSWORD=pgpassword
 
 I proceeded to set up the Docker Compose file and Dockerfile to boot the containers as I wanted with volumes for each. Next I added a third container for my python script, I will need to add more details to it as I work out which ports I will need to use. 
 
-## Milestone 2
+---
+
+### Setting up methods following object oriented programming
 
 I created 3 python files for 3 classes of components of my pipeline. A data extractor, a data connector and a data cleaner. I started writing methods for each. I began by writing a method to load my database credentials from a yaml file. Then I created a method to instantiate my SQLAlchemy engine with the credentials from the previous method. 
 
-*read_db_creds later renamed load_yaml as used for different tasks. Credentials added as an argument for init_db_engine allowing multiple engines from different credentials.
+*read_db_creds later renamed load_yaml as used for different tasks. Credentials added as an argument for init_db_engine allowing multiple engines from different credentials, for instance for taking data from source database and loading to another after cleaning.
 
 ```python
     def read_db_creds():
@@ -51,13 +54,27 @@ def df_extract_rds_table(engine, table_name):
         return df
 ```
 
-### Data Cleaning
+Later I will be adding more methods to extract from multiple sources and multiple formats.
+
+---
+
+## Extraction and Data cleaning Summary
+
+From an AWS RDS server, I used SQLAlchemy to connect and then used pd.read_sql to run an SQLQuery for the entire "legacy_users" table and load it into a dataframe.
+
+From a S3 direct link, I used the tabula library to load a pdf file with a table of card details into a dataframe. 
+
+Using an API, by using a loop to send get requests to an endpoint for each store url to retrieve a json file of the store details and append them into one dataframe.
+
+Accessing an S3 bucket using the bucket key and pd.read_csv() to load the products table from an csv file into a dataframe.
 
 For the sake of learning, I used a combination of different tools to explore, clean and format the tables. Sometimes I used pandas and sometimes I used pgadmin and SQL queries, sometimes both. What I did is not a recommendation for a pipeline, but merely to show my ability to use both. 
 
 I had 6 datasets to explore, clean and reformat before uploading them to my postgres database for analysis: User info, credit card details, datetime events, product info, store details and finally the orders table which would be the centre table linking to the others in a star schema. 
 
-#### User details table
+---
+
+### User details table
 
 As the user details data was in an AWS RDS server, I could connect to it directly with pgadmin. This allowed me to use SQL queries to have a look at the legacy_users data and decide what cleaning steps are necessary. 
 
@@ -98,9 +115,9 @@ How to format date columns is open to interpretation as it depends what sort of 
 ##### Data types and N/A of any invalid data 
 Aside from dates, the only entries which should not be strings are the country and country_codes which should be category type. By using pd.astype() I changed these as required.
 
+---
 
-
-### Card Details table
+### Dim Card Details table
 
 #### Pdf file
 
@@ -159,79 +176,92 @@ df.reset_index(drop=True, inplace=True)
 
 to drop the data_0 column and reset the index given all our removed rows.
 
+---
 
+### Dim Store Details
 
-### Dim Store Details clean up 
-
-df2["lat"].unique()
-
+`df2["lat"].unique()` output:
+```
 array(['N/A', None, '13KJZ890JH', '2XE1OWOC23', 'NULL', 'OXVE5QR07O',
        'VKA5I8H32X', 'LACCWDI0SB', 'A3O5CBWAMD', 'UXMWDMX1LC'],
       dtype=object)
+```
 
 Since it had no useful information, the column was dropped.
 
 
-df2["country_code"].unique() gives: 
+`df2["country_code"].unique()` output: 
 ```
 array([None, 'GB', 'DE', 'US', 'YELVM536YT', 'FP8DLXQVGH', 'NULL',
        'HMHIFNLOBN', 'F3AO8V2LHU', 'OH20I92LX3', 'OYVW925ZL8',
-       'B3EH2ZGQAV'], dtype=object)
+       'B3EH2ZGQAV'], dtype=object) 
 ```
 
-If we can cut the 'all' null rows, then fix the 'any' null rows, we can use GB/DE/US to cut any unwanted bad data rows.
+I used the same method I have before: Cut the 'all' null rows, fix the 'any' null rows then use the discrete category column (GB/DE/US) to cut any unwanted bad data rows.
 
+After dropping the 'all' null rows, I moved to the 'any' null rows that might need fixing, the sequence:
 ```python
 mask = df2.isnull()
 mask = mask.any(axis=1)
 any_null_rows = df2.loc[mask]
 ```
+...revealed that the only row which has some null entries was store 0, the webstore. We want to keep this so we do not need any further action for 'any' null rows.
 
-reveals that the only row which has some null entries are store 0, the webstore. This means we can keep rows with `country_code is in [None, GB, DE, and US]` and this will remove the bad rows. We can check by making a mask of the inverse to see the rubbish lines.
+Proceeding to the final step, I found the unique continent values, `df2["continent"].unique()` output:
 
+```
+array([None, 'Europe', 'America', 'eeEurope', 'eeAmerica'], dtype=object)
+```
+so I used:
 ```python
-# moving the latitude column next to the longitude
-        latitude = df.pop("latitude")
-        df.insert(3, "latitude", latitude)
+df.loc[df["continent"] == "eeEurope", "continent"] = "Europe"
+df.loc[df["continent"] == "eeAmerica", "continent"] = "America"
+```
+to change those.
 
-        # moving the store_code column to far left
-        col_move = df.pop("store_code")
-        df.insert(0, "store_code", col_move)
+`df2["store_type"].unique()` output:
+```
+array(['Web Portal', 'Local', 'Super Store', 'Mall Kiosk', 'Outlet'],
+      dtype=object)
 ```
 
-`df2["continent"].unique()` shows:
-`array([None, 'Europe', 'America', 'eeEurope', 'eeAmerica'], dtype=object)`
+looks fine, so no action taken.
 
-T
+The staff numbers column had some non-integers so was purified using the regex method previously used.
 
-`df2["store_type"].unique()`
-`array(['Web Portal', 'Local', 'Super Store', 'Mall Kiosk', 'Outlet'],
-      dtype=object)`
+It makes more sense to have longitude and latitude next to each other, although they also seem like useless information but we will see what is required from the data.
+```python
+# moving the latitude column next to the longitude
+latitude = df.pop("latitude")
+df.insert(3, "latitude", latitude)
 
-      looks fine
+# moving the store_code column to far left
+col_move = df.pop("store_code")
+df.insert(0, "store_code", col_move)
+```
 
-It makes more sense to have longitude and latitude next to each other, although they also seem like useless information but we will see what is required from the data. 
-
-The store code also seems like it should be the first column. 
+ 
+The store code was moved to the first column. 
 
 The index column has no rogue data in it, so can be dropped.
 
-the first row for the webstore can have pd.NA for all the N/A values for consistency. 
+The first row for the webstore can have pd.NA for all the N/A values for consistency. 
+
+---
 
 ### Products
 
 By using boto3 I imported a csv in an s3 bucket into a pandas dataframe. First by creating the boto3 client and then by using s3.get_object to create a response from the server. Then using pd.read_csv on the body of the response. 
 
-The data looks like this:
+I used the same method as before, this time using the "category" column 
 
-"|    |   Unnamed: 0 | product_name                                | product_price   | weight   | category       |           EAN | date_added   | uuid                                 | removed         | product_code   |\n|---:|-------------:|:--------------------------------------------|:----------------|:---------|:---------------|--------------:|:-------------|:-------------------------------------|:----------------|:---------------|\n|  0 |            0 | FurReal Dazzlin' Dimples My Playful Dolphin | £39.99          | 1.6kg    | toys-and-games | 7425710935115 | 2005-12-02   | 83dc0a69-f96f-4c34-bcb7-928acae19a94 | Still_avaliable | R7-3126933h    |\n|  1 |            1 | Tiffany's World Day Out At The Park         | £12.99          | 0.48kg   | toys-and-games |  487128731892 | 2006-01-09   | 712254d7-aea7-4310-aff8-8bcdd0aec7ff | Still_avaliable | C2-7287916l    |\n|  2 |            2 | Tiffany's World Pups Picnic Playset         | £7.00           | 590g     | toys-and-games | 1945816904649 | 1997-03-29   | b089ef6f-b628-4e37-811d-fffe0102ba64 | Still_avaliable | S7-1175877v    |\n|  3 |            3 | Tiffany's World Wildlife Park Adventures    | £12.99          | 540g     | toys-and-games | 1569790890899 | 2013-03-20   | d55de422-8b98-47d6-9991-e4bc4c5c0cb0 | Removed         | D8-8421505n    |\n|  4 |            4 | Cosatto Cosy Dolls Pram                     | £30.00          | 1.91kg   | toys-and-games | 7142740213920 | 2007-12-23   | 7945b657-cb02-4cc5-96cf-f65ed0a8f235 | Still_avaliable | B6-2596063a    |"
-
-Removing bad or nan rows via discrete category:
-
+`df["category"].unique()` outputs:
 ```
-# reveal all the categories
-df["category"].unique()
-
+array(['toys-and-games', 'sports-and-leisure', nan, 'pets', 'homeware',
+       'S1YB74MLMJ', 'C3NCA2CL35', 'WVPMHZP59U', 'health-and-beauty',
+       'food-and-drink', 'diy'], dtype=object)
+```
+```python
 # cut out any bad categories
 legit_category = ['toys-and-games', 'sports-and-leisure', 'pets', 'homeware','health-and-beauty',
        'food-and-drink', 'diy']
@@ -246,14 +276,18 @@ df[~mask]
 df = df[mask]
 ```
 
+All the values in the "product_weight" category needed normalising. I wrote a function called product_weight_clean() which does this. In short it uses strip and split and replace and float to adjust to create 3 new columns: units_in_product, unit_weight and product_weight. I used reindex to move columns to a more logical order.
 
 
+---
+### Uploading it all to my Database
 
-### Orders
+Using my dataconnector class I created a second SQLAlchemy engine for my own postgreSQL database: "sales_engine".
 
-by checking if the product_quantity and index columns can be converted to integers with coerce, then checking for any null values (coerce changes non integers to NaN), I ascertained that there are no rows with rubbish data.
+I then used `df.to_sql("table_name", engine"` to send each table to my new database.
 
+---
 
+## SQL queries 
 
-
-
+After uploading all my tables to my postgresql database, I need to adjust datatypes and reformat the table for analytical use.

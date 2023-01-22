@@ -11,7 +11,7 @@ from botocore.client import Config
 class DataExtractor:
     def extract_from_public_s3(bucket, key):
         s3 = boto3.client("s3", config=Config(signature_version=UNSIGNED))
-        response = s3.get_object(Bucket="data-handling-public", Key="products.csv")
+        response = s3.get_object(Bucket=bucket, Key=key)
 
         df = pd.read_csv(response.get("Body"))
         return df
