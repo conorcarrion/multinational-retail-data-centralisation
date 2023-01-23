@@ -125,7 +125,7 @@ The card details came from a pdf file. To parse this information I used Tabula, 
 
 #### Starting data
 
-df.head()
+`df.head()` outputs:
 
 |    |   0 | 1                | 2           | 3                           | 4                      |   5 |   6 |
 |---:|----:|:-----------------|:------------|:----------------------------|:-----------------------|----:|----:|
@@ -160,7 +160,7 @@ Next I checked for any remaining rows where 1 or more entries were null. Similar
 
 This revealed a block of rows where the card information was not entered correctly. The card number was in the data_0 column, and the rest of the information was concatenated in the card_number column. I wrote a function to fix this, then used `.apply()` and `.update()` to correct the original dataframe.
 
-Finally I used the discrete category of the card_provider to find all the unique card_provider entries with `df["card_provider"].unique()`. By manually creating from this list the legit card provider list, I then used `df.loc[~df["card_provider].isin(legit_card_providers)]` to reveal a lot of bad rows with nonsense information. I could then drop these by:
+Finally I used the discrete category of the card_provider to find all the unique card_provider entries with `df["card_provider"].unique()`. By manually creating from this list the legit card provider list, I used `df.loc[~df["card_provider].isin(legit_card_providers)]` to reveal a lot of bad rows with nonsense information. I could then drop these by:
 ```python
 df = df.loc[df["card_provider"].isin(legit_card_providers)]
 ```
@@ -291,3 +291,91 @@ I then used `df.to_sql("table_name", engine"` to send each table to my new datab
 ## SQL queries 
 
 After uploading all my tables to my postgresql database, I need to adjust datatypes and reformat the table for analytical use.
+
+Below is an example of one of the formatting SQL queries I wrote for the products table. 
+
+```SQL
+ALTER TABLE dim_products_table
+    DROP COLUMN index,
+    ADD COLUMN weight_class VARCHAR(255);
+
+UPDATE dim_products_table
+SET weight_class =
+    CASE
+        WHEN product_weight BETWEEN 0 AND 3 THEN 'Light'
+        WHEN product_weight BETWEEN 3 AND 41 THEN 'Mid_Sized'
+        WHEN product_weight BETWEEN 41 AND 141 THEN 'Heavy'
+        WHEN product_weight BETWEEN 141 AND 200 THEN 'Truck_Required'
+        ELSE 'Other'
+    END;
+
+ALTER TABLE dim_products_table
+    RENAME COLUMN removed TO still_available;
+
+ALTER TABLE dim_products_table
+	ALTER COLUMN product_price TYPE FLOAT,
+	ALTER COLUMN "EAN" TYPE VARCHAR(18),
+	ALTER COLUMN product_code TYPE VARCHAR(12),
+	ALTER COLUMN date_added TYPE DATE USING date_added::date,
+	ALTER COLUMN uuid TYPE UUID USING uuid::uuid,
+	ALTER COLUMN weight_class TYPE VARCHAR(15),
+    ALTER COLUMN unit_weight TYPE SMALLINT,
+    ALTER COLUMN units_in_product TYPE SMALLINT;
+
+UPDATE dim_products_table
+SET still_available =
+    CASE still_available
+        WHEN 'Available' THEN TRUE
+        WHEN 'Removed' THEN FALSE
+        ELSE NULL
+    END;
+
+ALTER TABLE dim_products_table
+    ALTER COLUMN still_available TYPE bool
+	USING still_available::boolean;
+
+```
+
+I start by dropping the index column which was carried over by the Pandas dataframe. 
+
+My task was to create an additional column for the weight which was more human friendly so that a hypothetical warehouse team could know how to pack and ship the product. For this I used a CASE statement to perform conditional logic on the product_weight column. Depending on the size of the number(the weight of the product), a category for that row was added: Light, Mid_Sized, Heavy, Truck_Required. 
+
+There is a column for whether the product is still available or not, this is better as a boolean instead of a string. I renamed the column to still_available and used a CASE statement again to change 'Available' to TRUE and 'Removed' to FALSE. 
+
+I alter the data type for every column to something more suitable including limiting the number of characters for each string: VARCHAR(n). This is done to conserve storage space and improve query performance.
+
+```sql
+ALTER TABLE dim_users
+ADD PRIMARY KEY (user_uuid);
+
+ALTER TABLE dim_store_details
+ADD PRIMARY KEY (store_code);
+
+ALTER TABLE dim_products_table
+ADD PRIMARY KEY (product_code);
+
+ALTER TABLE dim_date_times
+ADD PRIMARY KEY (date_uuid);
+
+ALTER TABLE dim_card_details
+ADD PRIMARY KEY (card_number);
+```
+I set the primary key for each table.
+
+```sql
+ALTER TABLE orders_table
+    ADD FOREIGN KEY (user_uuid) REFERENCES dim_users (user_uuid),
+    ADD FOREIGN KEY (store_code) REFERENCES dim_store_details (store_code),
+    ADD FOREIGN KEY (product_code) REFERENCES dim_products_table (product_code),
+    ADD FOREIGN KEY (date_uuid) REFERENCES dim_date_times (date_uuid),
+    ADD FOREIGN KEY (card_number) REFERENCES dim_card_details (card_number);
+```
+I added foreign key contraints to each column to enforce reference between the columns. In other words, prevent any insertion or update in the table that does not match the values in the referenced column and table. 
+
+## Analysis
+
+AICore gave the following set of questions for the SQL analysis:
+
+![Analysis](analysis.png)
+
+My answers to these can be found in the analysis folder. I used Joins, Aggregations, Group By and Order by clauses, Sums and Case and Nested queries. 
