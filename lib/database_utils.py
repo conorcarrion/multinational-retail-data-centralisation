@@ -14,7 +14,7 @@ class DatabaseConnector:
             return credentials
 
     def init_db_engine(credentials):
-
+        # creates an instance of an SQLAlchemy engine with the credentials provided.
         sqlalchemy_url = sqlalchemy.engine.URL.create(
             "postgresql",
             username=credentials["RDS_USER"],
@@ -27,6 +27,7 @@ class DatabaseConnector:
         return engine
 
     def list_db_tables(engine):
+        # prints the tables in the database the provided engine is connected to.
         inspector = inspect(engine)
         table_names = inspector.get_table_names()
         for table_name in table_names:
@@ -34,6 +35,7 @@ class DatabaseConnector:
         return table_names
 
     def df_upload_to_db(df, tablename, engine):
+        # upload a dataframe to a database with specified tablename using connected sqlalchemy engine
         try:
             df.to_sql(f"{tablename}", engine)
             return True
